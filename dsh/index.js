@@ -9,7 +9,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import { collectionWindow, compactCommitMessage, localDayWindow } from './report-utils.js'
 import {
   MAX_TARGETS,
-  diffLines,
+  compareWebSnapshot,
   isPublicAddress,
   isProxyFakeAddress,
   limitReportsPerTarget,
@@ -35,6 +35,7 @@ const MODEL_INPUT_LIMIT = 26000
 const TOOL_TARGET_EVIDENCE_LIMIT = 14000
 const TOOL_TOTAL_EVIDENCE_LIMIT = 60000
 const WEB_BYTE_LIMIT = 2 * 1024 * 1024
+const WEB_NORMALIZATION_VERSION = 2
 const WORKBENCH_ID = 'wisdomqin/product-update-tracker'
 const AUTOMATION_TITLE = '产品更新追踪'
 const AUTOMATION_PREFIX = '[deepseek-harness-daily:'
@@ -248,12 +249,9 @@ async function fetchPublicText(input) {
 async function fetchWebTarget(target) {
   const fetched = await fetchPublicText(target.url)
   const hash = textHash(fetched.text)
-  const previous = target.snapshot?.text || ''
-  const baseline = !target.snapshot?.hash
-  const changed = !baseline && target.snapshot.hash !== hash
-  const diff = changed ? diffLines(previous, fetched.text, 80) : { added: [], removed: [], addedCount: 0, removedCount: 0, truncated: false }
-  const nextSnapshot = { hash, text: fetched.text.slice(0, 100000), contentType: fetched.contentType, finalUrl: fetched.finalUrl, capturedAt: now() }
-  return { kind: 'web', baseline, changed, diff, contentType: fetched.contentType, finalUrl: fetched.finalUrl, nextSnapshot }
+  const comparison = compareWebSnapshot(target.snapshot, fetched.text, WEB_NORMALIZATION_VERSION)
+  const nextSnapshot = { hash, text: fetched.text.slice(0, 100000), normalizationVersion: WEB_NORMALIZATION_VERSION, contentType: fetched.contentType, finalUrl: fetched.finalUrl, capturedAt: now() }
+  return { kind: 'web', ...comparison, contentType: fetched.contentType, finalUrl: fetched.finalUrl, nextSnapshot }
 }
 
 function parseModelJson(text) {

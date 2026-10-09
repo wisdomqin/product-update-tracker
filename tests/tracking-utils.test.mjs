@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   DEFAULT_TARGET_URL,
+  compareWebSnapshot,
   diffLines,
   isPublicAddress,
   isProxyFakeAddress,
@@ -139,6 +140,21 @@ test('produces bounded line diffs with previous-to-current semantics', () => {
   assert.equal(diff.addedCount, 2)
   assert.equal(diff.removedCount, 2)
   assert.equal(diff.truncated, true)
+})
+
+test('tracks HTML main content without sidebar navigation noise', () => {
+  const html = '<nav>统信 UOS 系统安装指南</nav><main><h1>更新日志</h1><p>5.7.6 修复任务问题</p></main><footer>版权</footer>'
+  assert.equal(normalizeText(html, 'text/html'), '更新日志\n5.7.6 修复任务问题')
+})
+
+test('upgrades legacy full-page snapshots without reporting removed navigation', () => {
+  const legacy = { hash: textHash('侧边栏\n更新日志\n5.7.6'), text: '侧边栏\n更新日志\n5.7.6' }
+  const unchanged = compareWebSnapshot(legacy, '更新日志\n5.7.6', 2)
+  assert.equal(unchanged.changed, false)
+  assert.equal(unchanged.diff.removedCount, 0)
+  const changed = compareWebSnapshot(legacy, '更新日志\n5.7.7', 2)
+  assert.equal(changed.changed, true)
+  assert.deepEqual(changed.diff.added, ['5.7.7'])
 })
 
 test('normalizes HTML and structured JSON into stable text', () => {

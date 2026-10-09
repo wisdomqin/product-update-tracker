@@ -145,12 +145,23 @@ export function normalizeText(text, contentType = 'text/plain') {
       }
       source = JSON.stringify(stable(JSON.parse(source)), null, 2)
     } catch { /* retain invalid JSON as text */ }
-  } else if (type.includes('html') || type.includes('xml') || type.includes('rss') || type.includes('atom')) {
+  } else if (type.includes('html') || type.includes('xhtml')) {
     source = source
       .replace(/<!--[^]*?-->/g, ' ')
       .replace(/<(script|style|svg|noscript)\b[^>]*>[^]*?<\/\1\s*>/gi, ' ')
+    const main = /<main\b[^>]*>([^]*?)<\/main\s*>/i.exec(source)?.[1]
+    const article = /<article\b[^>]*>([^]*?)<\/article\s*>/i.exec(source)?.[1]
+    source = main || article || source.replace(/<(nav|aside|header|footer)\b[^>]*>[^]*?<\/\1\s*>/gi, ' ')
+    source = source
       .replace(/<(?:meta|link)\b[^>]*>/gi, ' ')
-      .replace(/<\/?(?:p|div|section|article|header|footer|main|aside|nav|h[1-6]|li|tr|br|entry|item|title|description|summary|content)\b[^>]*>/gi, '\n')
+      .replace(/<\/?(?:p|div|section|article|main|h[1-6]|li|tr|br)\b[^>]*>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+    source = decodeEntities(source)
+  } else if (type.includes('xml') || type.includes('rss') || type.includes('atom')) {
+    source = source
+      .replace(/<!--[^]*?-->/g, ' ')
+      .replace(/<(script|style|svg|noscript)\b[^>]*>[^]*?<\/\1\s*>/gi, ' ')
+      .replace(/<\/?(?:entry|item|title|description|summary|content|p|div|li|br)\b[^>]*>/gi, '\n')
       .replace(/<[^>]+>/g, ' ')
     source = decodeEntities(source)
   }
@@ -175,6 +186,20 @@ export function diffLines(previous, current, limit = 80) {
     removedCount: removedAll.length,
     truncated: addedAll.length > limit || removedAll.length > limit,
   }
+}
+
+export function compareWebSnapshot(snapshot, currentText, normalizationVersion) {
+  const baseline = !snapshot?.hash
+  if (baseline) return { baseline: true, changed: false, diff: { added: [], removed: [], addedCount: 0, removedCount: 0, truncated: false } }
+  const diff = diffLines(snapshot.text || '', currentText, 80)
+  if (snapshot.normalizationVersion !== normalizationVersion) {
+    return {
+      baseline: false,
+      changed: diff.addedCount > 0,
+      diff: { ...diff, removed: [], removedCount: 0, truncated: diff.addedCount > diff.added.length },
+    }
+  }
+  return { baseline: false, changed: snapshot.hash !== textHash(currentText), diff }
 }
 
 export function limitReportsPerTarget(reports, limit = 60) {
