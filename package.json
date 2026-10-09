@@ -1,6 +1,6 @@
 {
   "name": "deepseek-harness-daily",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "添加名称和网址，通过 DSH 自动化任务每天追踪 GitHub 仓库与普通网页的内容变化",
   "type": "module",
   "main": "./dsh/index.js",

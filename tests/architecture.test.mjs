@@ -19,6 +19,14 @@ test('uses GitHub Atom and patches before API fallback', () => {
   assert.match(server, /if \(entries\.length >= 20 && oldest > since\)/)
 })
 
+test('asks for plain product language while preserving technical English names', () => {
+  assert.match(server, /面向产品经理和普通用户/)
+  assert.match(server, /内部维护/)
+  assert.match(server, /保留原始英文及大小写/)
+  assert.match(server, /generation projection/)
+  assert.match(server, /不要逐条复述 commit/)
+})
+
 test('keeps exactly the two dedicated scoped tracking tools', () => {
   assert.match(server, /agent\.ctx\.tools\.restrict\(\{ allow: \[\] \}\)/)
   assert.match(server, /name: 'tracking_collect_all'/)

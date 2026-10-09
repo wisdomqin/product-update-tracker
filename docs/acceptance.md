@@ -2,16 +2,16 @@
 
 ## 最终候选版本
 
-- 包版本：`0.4.4`
+- 包版本：`0.4.5`
 - 安装来源：GitHub Release tarball（固定文件名 `product-update-tracker.tgz`）
-- 包体积：41,900 bytes
-- SHA-256：`396b32e560a03d05ddcdeb378d2c1226c8a1cb0a6e002ebfb239a36c6ab53f9e`
+- 包体积：42,596 bytes
+- SHA-256：`0ca2720b1ae5883f6d387f892840dc6485417752dcfc20ee8e727f5e157265c2`
 - DSH Desktop：`0.11.0`
 - 平台：macOS `26.5.1`，Apple Silicon (`arm64`)
 
 ## 已完成
 
-- `pnpm check`：32 项测试通过。
+- `pnpm check`：33 项测试通过。
 - `pnpm pack`：包中包含 `package.json`、`cordis.patch.yml`、服务端入口、客户端入口、README、LICENSE 和测试。
 - 工作台使用 `customFrame: true`，原生会话使用宿主提供的 `conversation` 节点。
 - 首次进入由宿主目录选择器选择工作区，不静默创建目录。
@@ -22,7 +22,7 @@
 
 ## 最终发布前待完成
 
-- 从最终 `0.4.4` tarball 安装后完整重启 DSH Desktop。
+- 从最终 `0.4.5` tarball 安装后完整重启 DSH Desktop。
 - 确认正式仓库身份下的工作台入口、工作区选择、会话归属和自动任务重新绑定。
 - 复核最终 Release 资产下载、大小和 SHA-256。
 - 运行市场仓库 `npm run check` 并查看收录 PR 的实际检查日志。
