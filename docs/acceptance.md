@@ -22,10 +22,14 @@
 - 已从最终 `0.4.5` tarball 安装并完整重启 DSH Desktop；用户确认工作台入口、日期归档、昨日检查、GitHub Atom/patch 抓取、网页正文比较和日报表达均正常。
 - 正式仓库身份下的工作区、会话归属和每天 11:00 自动任务已重新绑定。
 
-## 投稿流程待完成
+## 投稿状态
 
-- 复核最终 Release 资产下载、大小和 SHA-256。
-- 运行市场仓库检查并查看收录 PR 的实际 CI 日志。
+- 公开仓库：<https://github.com/wisdomqin/product-update-tracker>
+- Release：<https://github.com/wisdomqin/product-update-tracker/releases/tag/v0.4.5>
+- 公开下载复核：42,596 bytes，SHA-256 与本地候选包一致。
+- 市场 PR：<https://github.com/dataelement/awesome-dsh-workbench/pull/32>
+- PR 范围：仅新增 `data/workbenches/wisdomqin__product-update-tracker.yml`。
+- Catalog CI `validate` 与 `Trusted catalog probe` 均已通过；等待维护者审核合并。
 
 ## 不适用或边界
 
