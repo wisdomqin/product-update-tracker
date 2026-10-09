@@ -1,0 +1,58 @@
+{
+  "name": "deepseek-harness-daily",
+  "version": "0.4.0",
+  "description": "添加名称和网址，通过 DSH 自动化任务每天追踪 GitHub 仓库与普通网页的内容变化",
+  "type": "module",
+  "main": "./dsh/index.js",
+  "exports": {
+    ".": "./dsh/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "dsh",
+    "lib",
+    "tests",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "scripts": {
+    "check": "node --check dsh/index.js && node --check dsh/report-utils.js && node --check lib/client.js && node --test tests/*.test.mjs",
+    "pack:check": "pnpm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0",
+  "author": "wisdomqin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wisdomqin/product-update-tracker"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.4 <5.0.0-0",
+    "@deepseek-ai/dsh-host-webserver": ">=0.1.0-0 <0.3.0-0",
+    "@deepseek-ai/dsh-llm": ">=0.1.0-0 <0.3.0-0",
+    "@deepseek-ai/dsh-agent-default-model": ">=0.1.0-0 <0.3.0-0",
+    "@deepseek-ai/dsh-agent": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-schedule": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "*"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "dsh-desktop-workbenches"
+      ]
+    }
+  }
+}
