@@ -6,7 +6,7 @@ import { isIP } from 'node:net'
 import { randomUUID } from 'node:crypto'
 import Schema from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import { compactCommitMessage, localDateKey, localDayWindow, previousDayWindow } from './report-utils.js'
+import { collectionWindow, compactCommitMessage, localDayWindow } from './report-utils.js'
 import {
   MAX_TARGETS,
   diffLines,
@@ -351,8 +351,9 @@ async function storeReport({ target, window, fetched, analysis, trigger, started
   const webStats = fetched.kind === 'web'
     ? { additions: fetched.diff.addedCount, deletions: fetched.diff.removedCount, files: 0 }
     : null
+  const existingReport = state.reports.find((item) => item.targetId === target.id && item.reportDate === window.reportDate)
   const report = {
-    id: `${target.id}-${window.reportDate}-${Date.now()}`, reportDate: window.reportDate, timezone: window.timezone,
+    id: existingReport?.id || `${target.id}-${window.reportDate}-${Date.now()}`, reportDate: window.reportDate, timezone: window.timezone,
     targetId: target.id, targetName: target.name, targetUrl: target.url, sourceType: target.type,
     source: target.url, branch: fetched.kind === 'github' ? (fetched.spec.branch || 'default') : '', generatedAt: now(), startedAt, trigger, sessionId,
     commitCount: commits.length, itemCount: fetched.kind === 'web' ? fetched.diff.addedCount + fetched.diff.removedCount : commits.length,
@@ -382,18 +383,15 @@ async function storeReport({ target, window, fetched, analysis, trigger, started
   return report
 }
 
-async function collectTarget(target, reportDate = '') {
+async function collectTarget(target, reportDate = '', manual = false) {
   const startedAt = now()
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local'
-  const window = target.type === 'github'
-    ? (reportDate ? localDayWindow(reportDate) : previousDayWindow())
-    : { reportDate: reportDate || localDateKey(), timezone }
+  const window = collectionWindow({ reportDate, manual })
   const fetched = target.type === 'github' ? await fetchCommits(target, window) : await fetchWebTarget(target)
   return { target, window, fetched, startedAt }
 }
 
 async function generateReport(ctx, target, manual = false) {
-  const evidence = await collectTarget(target)
+  const evidence = await collectTarget(target, '', manual)
   let analysis
   if (!evidence.fetched.changed) analysis = deterministicAnalysis(target, evidence.fetched)
   else {

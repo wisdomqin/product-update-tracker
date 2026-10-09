@@ -31,6 +31,11 @@ export function previousDayWindow(value = new Date()) {
   return asWindow(start, end)
 }
 
+export function collectionWindow({ reportDate = '', manual = false, now = new Date() } = {}) {
+  if (reportDate) return localDayWindow(reportDate)
+  return manual ? localDayWindow(localDateKey(now)) : previousDayWindow(now)
+}
+
 export function compactCommitMessage(message = '') {
   return String(message).split('\n')[0].trim().slice(0, 180)
 }

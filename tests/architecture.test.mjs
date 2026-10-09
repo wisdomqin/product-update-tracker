@@ -26,6 +26,12 @@ test('keeps exactly the two dedicated scoped tracking tools', () => {
   assert.doesNotMatch(server, /name: 'deepseek_harness_collect_yesterday'/)
 })
 
+test('upserts one stable report per target and report date', () => {
+  assert.match(server, /collectionWindow\(\{ reportDate, manual \}\)/)
+  assert.match(server, /existingReport\?\.id \|\|/)
+  assert.match(server, /item\.targetId === report\.targetId && item\.reportDate === report\.reportDate/)
+})
+
 test('does not expose snapshots in public target state', () => {
   assert.match(server, /state\.targets\.map\(\(\{ snapshot, \.\.\.target \}\) => target\)/)
 })

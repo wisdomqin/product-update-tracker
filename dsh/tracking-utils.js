@@ -188,6 +188,20 @@ export function limitReportsPerTarget(reports, limit = 60) {
   })
 }
 
+function localKey(value) {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return ''
+  const pad = (part) => String(part).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function previousDateKey(dateKey) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''))
+  if (!match) return dateKey
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]) - 1)
+  return localKey(date)
+}
+
 export function migrateState(saved = {}, timestamp = new Date().toISOString()) {
   const targets = Array.isArray(saved.targets)
     ? saved.targets.map((target) => {
@@ -206,17 +220,33 @@ export function migrateState(saved = {}, timestamp = new Date().toISOString()) {
       })
     : [{ id: 'deepseek-harness', name: 'DeepSeek Harness', url: DEFAULT_TARGET_URL, type: 'github', enabled: true, createdAt: timestamp, updatedAt: timestamp, lastCheckedAt: '' }]
   const fallback = targets[0]
-  const reports = fallback ? (Array.isArray(saved.reports) ? saved.reports : []).map((report) => ({
-    ...report,
-    targetId: report.targetId || fallback.id,
-    targetName: report.targetName || fallback.name,
-    targetUrl: report.targetUrl || report.source || fallback.url,
-    sourceType: report.sourceType || fallback.type,
-  })) : []
+  const reports = fallback ? (Array.isArray(saved.reports) ? saved.reports : []).map((report) => {
+    const sourceType = report.sourceType || fallback.type
+    const generated = new Date(report.generatedAt)
+    const scheduledAtEleven = Number.isFinite(generated.getTime()) && generated.getHours() === 11
+    const reportDate = Number(saved.version) === 3 && sourceType === 'web' && report.trigger === 'scheduled' && scheduledAtEleven && localKey(report.generatedAt) === report.reportDate
+      ? previousDateKey(report.reportDate)
+      : report.reportDate
+    return {
+      ...report,
+      reportDate,
+      targetId: report.targetId || fallback.id,
+      targetName: report.targetName || fallback.name,
+      targetUrl: report.targetUrl || report.source || fallback.url,
+      sourceType,
+    }
+  }) : []
+  const seenReports = new Set()
+  const deduplicatedReports = reports.filter((report) => {
+    const key = `${report.targetId}\u0000${report.reportDate}`
+    if (seenReports.has(key)) return false
+    seenReports.add(key)
+    return true
+  })
   return {
-    version: 3,
+    version: 4,
     targets,
-    reports,
+    reports: deduplicatedReports,
     lastRunAt: saved.lastRunAt || '',
     lastError: saved.lastError || '',
     automation: { sessionId: '', taskId: '', time: '11:00', timeZone: 'Asia/Shanghai', scheduledAt: '', ...(saved.automation || {}) },

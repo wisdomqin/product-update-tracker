@@ -85,7 +85,7 @@ test('migrates v2 state and annotates legacy reports', () => {
     reports: [{ id: 'old', source: DEFAULT_TARGET_URL, headline: 'legacy' }],
     automation: { sessionId: 'session-1', taskId: 'task-1' },
   }, '2026-10-08T00:00:00.000Z')
-  assert.equal(migrated.version, 3)
+  assert.equal(migrated.version, 4)
   assert.equal(migrated.targets.length, 1)
   assert.equal(migrated.targets[0].id, 'deepseek-harness')
   assert.equal(migrated.targets[0].name, 'DeepSeek Harness')
@@ -99,6 +99,25 @@ test('preserves an explicitly empty v3 target list and drops orphan reports', ()
   const migrated = migrateState({ version: 3, targets: [], reports: [{ id: 'orphan', targetId: 'gone' }] })
   assert.deepEqual(migrated.targets, [])
   assert.deepEqual(migrated.reports, [])
+})
+
+test('migrates same-day scheduled web reports to yesterday and deduplicates manual reports', () => {
+  const generatedAt = new Date(2026, 9, 9, 11, 0).toISOString()
+  const migrated = migrateState({
+    version: 3,
+    targets: [{ id: 'web', name: 'Web', url: 'https://example.com/changelog', type: 'web' }],
+    reports: [
+      { id: 'scheduled', targetId: 'web', sourceType: 'web', reportDate: '2026-10-09', generatedAt, trigger: 'scheduled' },
+      { id: 'manual', targetId: 'web', sourceType: 'web', reportDate: '2026-10-08', generatedAt: new Date(2026, 9, 8, 20, 0).toISOString(), trigger: 'manual' },
+      { id: 'late-explicit', targetId: 'web', sourceType: 'web', reportDate: '2026-10-07', generatedAt: new Date(2026, 9, 7, 22, 0).toISOString(), trigger: 'scheduled' },
+    ],
+  })
+  assert.equal(migrated.version, 4)
+  assert.equal(migrated.reports.length, 2)
+  assert.equal(migrated.reports[0].id, 'scheduled')
+  assert.equal(migrated.reports[0].reportDate, '2026-10-08')
+  assert.equal(migrated.reports[1].id, 'late-explicit')
+  assert.equal(migrated.reports[1].reportDate, '2026-10-07')
 })
 
 test('limits reports independently for each target', () => {
