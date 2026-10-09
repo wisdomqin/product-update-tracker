@@ -27,7 +27,7 @@ test('keeps exactly the two dedicated scoped tracking tools', () => {
 })
 
 test('upserts one stable report per target and report date', () => {
-  assert.match(server, /collectionWindow\(\{ reportDate, manual \}\)/)
+  assert.match(server, /collectionWindow\(\{ reportDate \}\)/)
   assert.match(server, /existingReport\?\.id \|\|/)
   assert.match(server, /item\.targetId === report\.targetId && item\.reportDate === report\.reportDate/)
 })
@@ -75,6 +75,12 @@ test('opens on a monthly product update calendar', () => {
   assert.match(client, /上一个月/)
   assert.match(client, /下一个月/)
   assert.match(client, /onOpenReport\(item\.id, report\.id\)/)
+})
+
+test('labels manual refresh as checking yesterday', () => {
+  assert.match(client, /检查昨日更新/)
+  assert.match(client, /正在检查昨日…/)
+  assert.doesNotMatch(client, /立即检查/)
 })
 
 test('keeps report detail on the wide layout', () => {

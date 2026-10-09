@@ -385,7 +385,7 @@ async function storeReport({ target, window, fetched, analysis, trigger, started
 
 async function collectTarget(target, reportDate = '', manual = false) {
   const startedAt = now()
-  const window = collectionWindow({ reportDate, manual })
+  const window = collectionWindow({ reportDate })
   const fetched = target.type === 'github' ? await fetchCommits(target, window) : await fetchWebTarget(target)
   return { target, window, fetched, startedAt }
 }

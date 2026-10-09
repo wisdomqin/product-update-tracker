@@ -14,10 +14,10 @@ test('uses the previous local calendar day', () => {
   assert.equal(new Date(window.until).getTime() - new Date(window.since).getTime(), 24 * 60 * 60 * 1000)
 })
 
-test('files scheduled runs under yesterday and manual runs under today', () => {
+test('files both scheduled and manual checks under yesterday', () => {
   const now = new Date(2026, 9, 9, 11, 0)
   assert.equal(collectionWindow({ now }).reportDate, '2026-10-08')
-  assert.equal(collectionWindow({ now, manual: true }).reportDate, '2026-10-09')
+  assert.equal(collectionWindow({ now, manual: true }).reportDate, '2026-10-08')
   assert.equal(collectionWindow({ now, reportDate: '2026-10-07', manual: true }).reportDate, '2026-10-07')
 })
 
