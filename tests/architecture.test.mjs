@@ -12,6 +12,13 @@ test('uses DSH Schedule instead of a process-local timer', () => {
   assert.match(server, /产品更新追踪/)
 })
 
+test('uses GitHub Atom and patches before API fallback', () => {
+  assert.match(server, /function githubFeedUrl/)
+  assert.match(server, /parseGithubAtom\(feed\.raw\)/)
+  assert.match(server, /fetchPublicRaw\(`\$\{commit\.url\}\.patch`/)
+  assert.match(server, /if \(entries\.length >= 20 && oldest > since\)/)
+})
+
 test('keeps exactly the two dedicated scoped tracking tools', () => {
   assert.match(server, /agent\.ctx\.tools\.restrict\(\{ allow: \[\] \}\)/)
   assert.match(server, /name: 'tracking_collect_all'/)

@@ -91,6 +91,47 @@ function decodeEntities(text) {
   })
 }
 
+function xmlValue(block, tag, firstLine = false) {
+  const match = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i').exec(block)
+  if (!match) return ''
+  const decoded = decodeEntities(match[1]).replace(/<[^>]+>/g, ' ').replace(/\r/g, '').trim()
+  return firstLine ? (decoded.split('\n').map((line) => line.trim()).find(Boolean) || '') : decoded.replace(/\s+/g, ' ')
+}
+
+export function parseGithubAtom(xml) {
+  const entries = String(xml || '').match(/<entry\b[^>]*>[\s\S]*?<\/entry>/gi) || []
+  return entries.map((entry) => {
+    const href = /<link\b[^>]*\bhref=["']([^"']+)["'][^>]*>/i.exec(entry)?.[1] || ''
+    const sha = /\/commit\/([0-9a-f]{7,40})(?:[/?#]|$)/i.exec(href)?.[1] || ''
+    return {
+      sha,
+      shortSha: sha.slice(0, 7),
+      url: href,
+      message: xmlValue(entry, 'content', true) || xmlValue(entry, 'title'),
+      author: xmlValue(entry, 'name') || '未知',
+      committedAt: xmlValue(entry, 'updated'),
+    }
+  }).filter((entry) => entry.sha && entry.url && Number.isFinite(Date.parse(entry.committedAt)))
+}
+
+export function parseGithubPatch(patch) {
+  const chunks = String(patch || '').split(/^diff --git /m).slice(1)
+  return chunks.slice(0, 80).map((chunk) => {
+    const plus = /^\+\+\+\s+(?:b\/)?(.+)$/m.exec(chunk)?.[1]?.trim()
+    const minus = /^---\s+(?:a\/)?(.+)$/m.exec(chunk)?.[1]?.trim()
+    const renamed = /^rename to\s+(.+)$/m.exec(chunk)?.[1]?.trim()
+    const filename = renamed || (plus && plus !== '/dev/null' ? plus : minus && minus !== '/dev/null' ? minus : '')
+    let additions = 0
+    let deletions = 0
+    for (const line of chunk.split('\n')) {
+      if (line.startsWith('+') && !line.startsWith('+++')) additions += 1
+      else if (line.startsWith('-') && !line.startsWith('---')) deletions += 1
+    }
+    const status = /^(?:new file mode)\b/m.test(chunk) ? 'added' : /^(?:deleted file mode)\b/m.test(chunk) ? 'removed' : renamed ? 'renamed' : 'modified'
+    return { filename: filename.replace(/^"|"$/g, ''), status, additions, deletions, patch: chunk.slice(0, 900) }
+  }).filter((file) => file.filename)
+}
+
 export function normalizeText(text, contentType = 'text/plain') {
   let source = String(text || '').replace(/^\uFEFF/, '')
   const type = String(contentType).toLowerCase()

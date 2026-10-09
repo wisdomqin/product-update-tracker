@@ -9,6 +9,8 @@ import {
   migrateState,
   normalizeTargetUrl,
   normalizeText,
+  parseGithubAtom,
+  parseGithubPatch,
   parseGithubUrl,
   textHash,
 } from '../dsh/tracking-utils.js'
@@ -21,6 +23,36 @@ test('parses GitHub repository roots and commits branches', () => {
     owner: 'acme', repo: 'widgets', branch: 'release/v2',
   })
   assert.equal(parseGithubUrl('https://example.com/feed.xml'), null)
+})
+
+test('parses GitHub Atom commits without API access', () => {
+  const entries = parseGithubAtom(`<?xml version="1.0"?><feed><entry>
+    <link rel="alternate" href="https://github.com/acme/widgets/commit/0123456789abcdef0123456789abcdef01234567"/>
+    <title>truncated…</title><updated>2026-10-08T12:30:00Z</updated>
+    <author><name>Alice &amp; Bob</name></author>
+    <content type="html">&lt;pre&gt;fix: preserve full title\n\nbody&lt;/pre&gt;</content>
+  </entry></feed>`)
+  assert.equal(entries.length, 1)
+  assert.equal(entries[0].sha, '0123456789abcdef0123456789abcdef01234567')
+  assert.equal(entries[0].message, 'fix: preserve full title')
+  assert.equal(entries[0].author, 'Alice & Bob')
+})
+
+test('extracts bounded file statistics from GitHub patches', () => {
+  const files = parseGithubPatch(`diff --git a/src/a.js b/src/a.js
+index 111..222 100644
+--- a/src/a.js
++++ b/src/a.js
+@@ -1,2 +1,2 @@
+-old
++new
+ same
+`)
+  assert.equal(files.length, 1)
+  assert.equal(files[0].filename, 'src/a.js')
+  assert.equal(files[0].additions, 1)
+  assert.equal(files[0].deletions, 1)
+  assert.equal(files[0].status, 'modified')
 })
 
 test('rejects local, private and credential-bearing URLs', () => {

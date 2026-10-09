@@ -16,6 +16,8 @@ import {
   migrateState,
   normalizeTargetUrl,
   normalizeText,
+  parseGithubAtom,
+  parseGithubPatch,
   parseGithubUrl,
   targetType,
   textHash,
@@ -107,22 +109,22 @@ async function github(path) {
   return payload
 }
 
-async function githubTargetSpec(target) {
+function githubTargetSpec(target) {
   const parsed = parseGithubUrl(target.url)
   if (!parsed) throw new Error('目标不是 GitHub 仓库 URL')
-  let branch = parsed.branch
-  if (!branch) {
-    const repository = await github(`/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.repo)}`)
-    branch = clean(repository.default_branch, 240)
-    if (!branch) throw new Error('GitHub 仓库没有可用的 default_branch')
-  }
-  return { ...parsed, branch }
+  return parsed
 }
 
-async function fetchCommits(target, window) {
-  const spec = await githubTargetSpec(target)
+function githubFeedUrl(spec) {
+  const root = `https://github.com/${encodeURIComponent(spec.owner)}/${encodeURIComponent(spec.repo)}/commits`
+  if (!spec.branch) return `${root}.atom`
+  return `${root}/${spec.branch.split('/').map(encodeURIComponent).join('/')}.atom`
+}
+
+async function fetchCommitsFromApi(spec, window) {
   const repositoryPath = `/repos/${encodeURIComponent(spec.owner)}/${encodeURIComponent(spec.repo)}`
-  const query = new URLSearchParams({ sha: spec.branch, since: window.since, until: window.until, per_page: String(MAX_COMMITS) })
+  const query = new URLSearchParams({ since: window.since, until: window.until, per_page: String(MAX_COMMITS) })
+  if (spec.branch) query.set('sha', spec.branch)
   const list = await github(`${repositoryPath}/commits?${query}`)
   if (!Array.isArray(list)) throw new Error('GitHub API 返回了非预期的提交列表')
   const commits = list.slice(0, MAX_COMMITS).map((item) => ({
@@ -143,7 +145,38 @@ async function fetchCommits(target, window) {
       deletions: Number(file.deletions) || 0, patch: clean(file.patch, 900),
     }))
   }
-  return { kind: 'github', spec, commits, truncated: list.length >= MAX_COMMITS, detailedCount: Math.min(commits.length, DETAIL_LIMIT), changed: commits.length > 0 }
+  return { kind: 'github', spec, commits, truncated: list.length >= MAX_COMMITS, detailedCount: Math.min(commits.length, DETAIL_LIMIT), changed: commits.length > 0, fetchMode: 'api' }
+}
+
+async function fetchCommits(target, window) {
+  const spec = githubTargetSpec(target)
+  const feed = await fetchPublicRaw(githubFeedUrl(spec), 'application/atom+xml,application/xml,text/xml;q=0.9')
+  const entries = parseGithubAtom(feed.raw)
+  if (!entries.length && !/<feed\b/i.test(feed.raw)) throw new Error('GitHub 提交订阅返回了非预期内容')
+  const since = Date.parse(window.since)
+  const until = Date.parse(window.until)
+  const timestamps = entries.map((entry) => Date.parse(entry.committedAt)).filter(Number.isFinite)
+  const oldest = timestamps.length ? Math.min(...timestamps) : Number.POSITIVE_INFINITY
+  if (entries.length >= 20 && oldest > since) {
+    try { return await fetchCommitsFromApi(spec, window) }
+    catch (error) { throw new Error(`GitHub 提交订阅只覆盖最近 ${entries.length} 条，无法确认目标日期是否完整；API 补齐失败：${clean(error.message, 500)}`) }
+  }
+  const commits = entries
+    .filter((entry) => { const time = Date.parse(entry.committedAt); return time >= since && time < until })
+    .slice(0, MAX_COMMITS)
+    .map((entry) => ({ ...entry, message: compactCommitMessage(entry.message), files: [], stats: { additions: 0, deletions: 0, total: 0 } }))
+  let detailedCount = 0
+  for (const commit of commits.slice(0, DETAIL_LIMIT)) {
+    try {
+      const patch = await fetchPublicRaw(`${commit.url}.patch`, 'text/plain,text/x-diff;q=0.9')
+      commit.files = parseGithubPatch(patch.raw)
+      const additions = commit.files.reduce((sum, file) => sum + file.additions, 0)
+      const deletions = commit.files.reduce((sum, file) => sum + file.deletions, 0)
+      commit.stats = { additions, deletions, total: additions + deletions }
+      detailedCount += 1
+    } catch { /* commit metadata remains useful when a patch is unavailable */ }
+  }
+  return { kind: 'github', spec, commits, truncated: false, detailedCount, changed: commits.length > 0, fetchMode: 'atom+patch' }
 }
 
 async function assertPublicUrl(input) {
@@ -177,12 +210,12 @@ async function readLimitedResponse(response) {
   return new TextDecoder('utf-8', { fatal: false }).decode(bytes)
 }
 
-async function fetchPublicText(input) {
+async function fetchPublicRaw(input, accept = 'text/html,text/plain,application/json,application/rss+xml,application/atom+xml,application/xml,text/xml;q=0.9') {
   let url = await assertPublicUrl(input)
   for (let redirect = 0; redirect <= 5; redirect += 1) {
     const response = await fetch(url, {
       redirect: 'manual',
-      headers: { accept: 'text/html,text/plain,application/json,application/rss+xml,application/atom+xml,application/xml,text/xml;q=0.9', 'user-agent': 'DSH-WebTracking/0.3' },
+      headers: { accept, 'user-agent': 'DSH-WebTracking/0.4' },
       signal: AbortSignal.timeout(25000),
     })
     if ([301, 302, 303, 307, 308].includes(response.status)) {
@@ -199,12 +232,17 @@ async function fetchPublicText(input) {
     const supported = contentType.startsWith('text/') || ['application/json', 'application/ld+json', 'application/xml', 'application/rss+xml', 'application/atom+xml', 'application/xhtml+xml'].includes(contentType)
     if (!supported) throw new Error(`不支持的网页内容类型：${contentType || '未知'}`)
     const raw = await readLimitedResponse(response)
-    const text = normalizeText(raw, contentType)
-    if (!text) throw new Error('网页未返回可追踪的公开文本；可能依赖 JavaScript、登录或反爬验证')
     if (/\b(?:captcha|cf-chl-|cloudflare ray id|verify you are human)\b/i.test(raw.slice(0, 200000))) throw new Error('网页返回了人机验证或反爬页面，未记录为有效结果')
-    return { finalUrl: url.toString(), contentType, text }
+    return { finalUrl: url.toString(), contentType, raw }
   }
   throw new Error('网页重定向失败')
+}
+
+async function fetchPublicText(input) {
+  const fetched = await fetchPublicRaw(input)
+  const text = normalizeText(fetched.raw, fetched.contentType)
+  if (!text) throw new Error('网页未返回可追踪的公开文本；可能依赖 JavaScript、登录或反爬验证')
+  return { finalUrl: fetched.finalUrl, contentType: fetched.contentType, text }
 }
 
 async function fetchWebTarget(target) {
@@ -240,7 +278,7 @@ function parseModelJson(text) {
 function evidenceForTarget(target, window, fetched) {
   if (fetched.kind === 'github') return {
     targetId: target.id, targetName: target.name, targetUrl: target.url, sourceType: 'github', reportDate: window.reportDate,
-    repository: `${fetched.spec.owner}/${fetched.spec.repo}`, branch: fetched.spec.branch, commitCount: fetched.commits.length,
+    repository: `${fetched.spec.owner}/${fetched.spec.repo}`, branch: fetched.spec.branch || 'default', commitCount: fetched.commits.length,
     truncated: fetched.truncated, detailedCommitCount: fetched.detailedCount,
     commits: fetched.commits.map((commit) => ({
       sha: commit.shortSha, url: commit.url, message: commit.message, author: commit.author, committedAt: commit.committedAt, stats: commit.stats,
@@ -279,7 +317,7 @@ async function analyzeWithModel(ctx, target, window, fetched) {
 
 function deterministicAnalysis(target, fetched) {
   if (fetched.kind === 'github') return {
-    headline: '昨日没有检测到提交', overview: `GitHub ${fetched.spec.branch} 分支在前一个本地自然日没有返回提交。`, themes: ['无更新'], changes: [],
+    headline: '昨日没有检测到提交', overview: `GitHub ${fetched.spec.branch || '默认'} 分支在前一个本地自然日没有返回提交。`, themes: ['无更新'], changes: [],
     developerNotes: [], risk: '未检测到昨日提交，因此没有由昨日代码提交引入的新风险。', confidence: '高', analysisError: '',
   }
   if (fetched.baseline) return {
@@ -316,7 +354,7 @@ async function storeReport({ target, window, fetched, analysis, trigger, started
   const report = {
     id: `${target.id}-${window.reportDate}-${Date.now()}`, reportDate: window.reportDate, timezone: window.timezone,
     targetId: target.id, targetName: target.name, targetUrl: target.url, sourceType: target.type,
-    source: target.url, branch: fetched.kind === 'github' ? fetched.spec.branch : '', generatedAt: now(), startedAt, trigger, sessionId,
+    source: target.url, branch: fetched.kind === 'github' ? (fetched.spec.branch || 'default') : '', generatedAt: now(), startedAt, trigger, sessionId,
     commitCount: commits.length, itemCount: fetched.kind === 'web' ? fetched.diff.addedCount + fetched.diff.removedCount : commits.length,
     detailedCommitCount: fetched.kind === 'github' ? fetched.detailedCount : 0,
     truncated: Boolean(fetched.truncated || fetched.diff?.truncated), stats: webStats || totals(commits),
