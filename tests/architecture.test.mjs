@@ -12,11 +12,16 @@ test('uses DSH Schedule instead of a process-local timer', () => {
   assert.match(server, /产品更新追踪/)
 })
 
-test('uses GitHub Atom and patches before API fallback', () => {
+test('uses GitHub Atom, public HTML pagination and patches without REST API fallback', () => {
   assert.match(server, /function githubFeedUrl/)
   assert.match(server, /parseGithubAtom\(feed\.raw\)/)
+  assert.match(server, /fetchCommitsFromPublicPages\(spec, window\)/)
+  assert.match(server, /parseGithubCommitPage\(response\.raw, spec\)/)
   assert.match(server, /fetchPublicRaw\(`\$\{commit\.url\}\.patch`/)
-  assert.match(server, /if \(entries\.length >= 20 && oldest > since\)/)
+  assert.match(server, /oldest >= since/)
+  assert.match(server, /olderPages >= 2/)
+  assert.match(server, /if \(!complete\) throw new Error/)
+  assert.doesNotMatch(server, /api\.github\.com|fetchCommitsFromApi|API 补齐失败|x-github-api-version/)
 })
 
 test('asks for plain product language while preserving technical English names', () => {
@@ -35,6 +40,8 @@ test('keeps exactly the two dedicated scoped tracking tools', () => {
 })
 
 test('upserts one stable report per target and report date', () => {
+  assert.match(server, /selectCollectionTargets\(state\.targets/)
+  assert.match(server, /target_id: \{ type: 'string'/)
   assert.match(server, /collectionWindow\(\{ reportDate \}\)/)
   assert.match(server, /existingReport\?\.id \|\|/)
   assert.match(server, /item\.targetId === report\.targetId && item\.reportDate === report\.reportDate/)

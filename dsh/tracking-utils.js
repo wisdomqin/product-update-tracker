@@ -76,6 +76,16 @@ export function targetType(url) {
   return parseGithubUrl(url) ? 'github' : 'web'
 }
 
+export function selectCollectionTargets(targets, { targetId = '', reportDate = '', currentDate = '' } = {}) {
+  const selected = targetId ? targets.find((target) => target.id === targetId) : null
+  if (targetId && !selected) throw new Error('追踪对象不存在')
+  if (selected && !selected.enabled) throw new Error('追踪对象已暂停，请先启用后再补查')
+  if (reportDate && reportDate !== currentDate && (!selected || selected.type !== 'github')) {
+    throw new Error('历史日期只能指定单个 GitHub 追踪对象；普通网页无法回溯旧快照')
+  }
+  return selected ? [selected] : targets.filter((target) => target.enabled)
+}
+
 export function textHash(text) {
   return createHash('sha256').update(String(text)).digest('hex')
 }
@@ -112,6 +122,45 @@ export function parseGithubAtom(xml) {
       committedAt: xmlValue(entry, 'updated'),
     }
   }).filter((entry) => entry.sha && entry.url && Number.isFinite(Date.parse(entry.committedAt)))
+}
+
+/** Parse GitHub's public commit page, never an API endpoint. Fail closed if its shape changes. */
+export function parseGithubCommitPage(html, spec) {
+  const script = /<script\b(?=[^>]*\bdata-target=["']react-app\.embeddedData["'])[^>]*>([\s\S]*?)<\/script>/i.exec(String(html || ''))
+  if (!script) throw new Error('GitHub 公开提交页缺少提交数据，无法完整核查')
+  let route
+  try { route = JSON.parse(script[1]).payload.commitsRefRoute } catch { throw new Error('GitHub 公开提交页数据格式已变化，无法完整核查') }
+  if (!Array.isArray(route?.commitGroups)) throw new Error('GitHub 公开提交页结构已变化，无法完整核查')
+  const root = `/${encodeURIComponent(spec.owner)}/${encodeURIComponent(spec.repo)}/commits`
+  const branch = spec.branch ? `/${spec.branch.split('/').map(encodeURIComponent).join('/')}` : ''
+  const entries = route.commitGroups.flatMap((group) => {
+    if (!Array.isArray(group?.commits)) throw new Error('GitHub 公开提交页缺少提交列表，无法完整核查')
+    return group.commits.map((commit) => {
+      const sha = commit?.oid
+      const committedAt = commit?.committedDate
+      if (!/^[0-9a-f]{40}$/i.test(sha) || !Number.isFinite(Date.parse(committedAt))) throw new Error('GitHub 公开提交页存在无法识别的提交，无法完整核查')
+      return {
+        sha, shortSha: sha.slice(0, 7), url: `https://github.com/${encodeURIComponent(spec.owner)}/${encodeURIComponent(spec.repo)}/commit/${sha}`,
+        message: cleanCommitMessage(commit.shortMessage),
+        author: String(commit.authors?.[0]?.displayName || commit.authors?.[0]?.login || '未知').slice(0, 100),
+        committedAt,
+      }
+    })
+  })
+  const anchor = (String(html).match(/<a\b[^>]*>/gi) || []).find((tag) => /\brel=["']next["']/i.test(tag) && /\bhref=/i.test(tag))
+  const href = anchor && /\bhref=["']([^"']+)["']/i.exec(anchor)?.[1]?.replace(/&amp;/g, '&')
+  let next = ''
+  if (href) {
+    const url = new URL(href, 'https://github.com')
+    if (url.origin !== 'https://github.com' || url.pathname !== `${root}${branch}` || !/^[0-9a-f]{40} \d{1,5}$/i.test(url.searchParams.get('after') || '')) throw new Error('GitHub 公开提交页分页链接不可信，无法继续核查')
+    next = url.toString()
+  }
+  if (!entries.length && next) throw new Error('GitHub 公开提交页为空但仍有下一页，无法完整核查')
+  return { entries, next }
+}
+
+function cleanCommitMessage(message) {
+  return String(message || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 500)
 }
 
 export function parseGithubPatch(patch) {

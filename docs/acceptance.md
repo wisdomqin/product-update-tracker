@@ -36,3 +36,10 @@
 - 未发布 npm 包；市场使用 GitHub Release 安装来源。
 - 未验证 Windows、Linux 或 Intel macOS，不声明兼容。
 - 卸载后的宿主数据保留由 DSH Desktop 负责；本工作台不会在卸载时删除报告、会话或工作区文件。
+
+## 2026-10-13 本机修订（0.4.7，尚非上述公开 Release）
+
+- 删除 GitHub REST API 回退。Atom 最近 20 条覆盖不足时，使用同仓库公开提交网页分页和 `.patch`；若无法确认完整性，则不发布“无更新”。
+- `pnpm check`：35 项测试通过；本机 web profile 已从 0.4.7 tarball 安装，安装文件与包内 11 个文件逐项一致。本机固定名 `product-update-tracker.tgz` 也已更新为 0.4.7（SHA-256 `488199e6ffde4007f187ba1332a80dd46299f35f35cd880de3b0f36bdf52804b`）。安装时曾发现同版本号重包会命中旧缓存，因此以 0.4.7 新版本号完成最终安装校验。
+- [历史日报只读核对](history-audit-2026-10-13.md)发现若干当前公开计数与存档快照不一致；**没有自动改写历史日报**。重启后可在原会话中指定 GitHub 对象 ID 和日期逐项补查。
+- 本修订未在重启后的 Desktop 界面验收，也未更新远端 GitHub Release 或市场 PR。上面 0.4.5 的历史验收与发布记录保持原样。

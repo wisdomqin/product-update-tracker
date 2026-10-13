@@ -11,8 +11,10 @@ import {
   normalizeTargetUrl,
   normalizeText,
   parseGithubAtom,
+  parseGithubCommitPage,
   parseGithubPatch,
   parseGithubUrl,
+  selectCollectionTargets,
   textHash,
 } from '../dsh/tracking-utils.js'
 
@@ -37,6 +39,37 @@ test('parses GitHub Atom commits without API access', () => {
   assert.equal(entries[0].sha, '0123456789abcdef0123456789abcdef01234567')
   assert.equal(entries[0].message, 'fix: preserve full title')
   assert.equal(entries[0].author, 'Alice & Bob')
+})
+
+test('parses bounded public commit HTML and a same-repository next-page cursor', () => {
+  const sha = '0123456789abcdef0123456789abcdef01234567'
+  const spec = { owner: 'acme', repo: 'widgets', branch: 'release/v2' }
+  const embedded = JSON.stringify({ payload: { commitsRefRoute: { commitGroups: [{ title: 'Oct 10', commits: [{
+    oid: sha, committedDate: '2026-10-10T12:00:00Z', shortMessage: 'fix: public page', authors: [{ displayName: 'Alice' }],
+  }] }] } } })
+  const html = `<script data-target="react-app.embeddedData" type="application/json">${embedded}</script><a rel="next" href="/acme/widgets/commits/release/v2?after=${sha}+34&amp;other=1">Next</a>`
+  const parsed = parseGithubCommitPage(html, spec)
+  assert.equal(parsed.entries.length, 1)
+  assert.equal(parsed.entries[0].sha, sha)
+  assert.equal(parsed.entries[0].author, 'Alice')
+  assert.equal(parsed.entries[0].url, `https://github.com/acme/widgets/commit/${sha}`)
+  assert.match(parsed.next, /after=0123456789abcdef0123456789abcdef01234567\+34/)
+  assert.throws(() => parseGithubCommitPage(html.replace('/acme/widgets/commits/', '/other/widgets/commits/'), spec), /分页链接不可信/)
+  assert.throws(() => parseGithubCommitPage('<html>Login</html>', spec), /无法完整核查/)
+})
+
+test('scopes historical backfill to one enabled GitHub target without rewriting web snapshots', () => {
+  const targets = [
+    { id: 'repo', type: 'github', enabled: true },
+    { id: 'web', type: 'web', enabled: true },
+    { id: 'paused', type: 'github', enabled: false },
+  ]
+  const currentDate = '2026-10-12'
+  assert.deepEqual(selectCollectionTargets(targets, { currentDate }).map((x) => x.id), ['repo', 'web'])
+  assert.deepEqual(selectCollectionTargets(targets, { targetId: 'repo', reportDate: '2026-10-10', currentDate }).map((x) => x.id), ['repo'])
+  assert.throws(() => selectCollectionTargets(targets, { reportDate: '2026-10-10', currentDate }), /历史日期只能指定/)
+  assert.throws(() => selectCollectionTargets(targets, { targetId: 'web', reportDate: '2026-10-10', currentDate }), /普通网页无法回溯/)
+  assert.throws(() => selectCollectionTargets(targets, { targetId: 'paused', reportDate: '2026-10-10', currentDate }), /已暂停/)
 })
 
 test('extracts bounded file statistics from GitHub patches', () => {
