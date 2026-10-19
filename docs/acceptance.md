@@ -56,4 +56,4 @@
 ## 2026-10-19 公开发布与市场同步
 
 - `main` 已推送至 `ef5a03c`，标注 `v0.4.8`；[公开 Release](https://github.com/wisdomqin/product-update-tracker/releases/tag/v0.4.8) 为非草稿、非预发布、latest，附件 `product-update-tracker.tgz` 为 45,917 bytes，SHA-256 `ff4e7f9fa8d1d0e5e520ac386e3094dd0e7fc56de4100e3d7b144f748d5f2b52`。从 Release 重新下载的字节与本地包一致，`latest/download/product-update-tracker.tgz` 已重定向至 v0.4.8。
-- 市场现有条目的同名 latest Release 安装地址无需再提交 YAML PR。手动触发的[市场构建](https://github.com/dataelement/awesome-dsh-workbench/actions/runs/39218974820)首次因市场自身 Node 测试进程反序列化错误失败；原工作流重试成功，产出的 `github-pages` artifact 中该条目为 0.4.8、固定 v0.4.8 URL、45,917 bytes 和上述 SHA-256。公开市场索引仍需等待 GitHub Pages/CDN 切换后单独核对，不能把构建成功提前等同于线上已更新。
+- 市场现有条目的同名 latest Release 安装地址无需再提交 YAML PR。手动触发的[市场构建](https://github.com/dataelement/awesome-dsh-workbench/actions/runs/39218974820)首次因市场自身 Node 测试进程反序列化错误失败；原工作流重试成功，产出的 `github-pages` artifact 中该条目为 0.4.8、固定 v0.4.8 URL、45,917 bytes 和上述 SHA-256。GitHub Pages/CDN 切换后重新读取[公开市场索引](https://market.dshdesktop.com/index.json)，确认条目已显示 0.4.8、固定 v0.4.8 下载 URL、45,917 bytes 和相同 SHA-256；至此线上目录已更新。
