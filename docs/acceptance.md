@@ -44,7 +44,7 @@
 - [历史日报只读核对](history-audit-2026-10-13.md)发现若干当前公开计数与存档快照不一致；**没有自动改写历史日报**。重启后可在原会话中指定 GitHub 对象 ID 和日期逐项补查。
 - 本修订未在重启后的 Desktop 界面验收，也未更新远端 GitHub Release 或市场 PR。上面 0.4.5 的历史验收与发布记录保持原样。
 
-## 2026-10-19 本机修订（0.4.8，未更新远端 Release）
+## 2026-10-19 本机修订与发布（0.4.8）
 
 - 月度总览中已有日报的日期格支持鼠标悬停与键盘聚焦，一句话展示该日报标题摘要；鼠标离开、失焦、滚动或切换月份时关闭提示。
 - GitHub 公开提交页补查上限增加至 24 页，2026-10-12 DeepSeek Harness 当前公开页需 16 页才完成覆盖（151 条提交）；普通网页仍禁止旧日期回溯。
@@ -52,3 +52,8 @@
 - `pnpm check`：38 项测试通过；本机固定名 `product-update-tracker.tgz` 已更新为 0.4.8（SHA-256 `ff4e7f9fa8d1d0e5e520ac386e3094dd0e7fc56de4100e3d7b144f748d5f2b52`）。
 - 官方 `plugin --profile web add` 的正常、`--offline`、`--offline --ignore-scripts` 三次尝试均停在 pnpm resolved 7，被宿主 300 秒无进展保护终止；runner 恢复了 generation projections。**经用户同意**，先备份原 0.4.7 目录，再将 0.4.8 包的 11 个文件原子写入已安装目录并逐项校验；没有删除原备份。插件管理器的 profile manifest/lock 仍记录 0.4.7，今后包管理安装可能覆盖这次手动部署，仍需单独修复 pnpm 阻塞。
 - 用户自行重启后，服务进程在 15:37 北京时间重建；本机 `/api/deepseek-harness-daily/state` 返回 200。新后端 `reportDate` 接口补查 2026-10-12：DeepSeek Harness 0→151、dsh-desktop 0→1，均为 `public-html+patch`，原日报 ID 保持不变；对比补查前备份，仅这两条日报内容变化，其他日报未改变。dshd 当日已有 3 条，未重复改写；普通网页未回溯。**Hover 的运行中视觉效果因浏览器 provider 不可用尚未实测**，仅代码测试与安装文件校验通过。
+
+## 2026-10-19 公开发布与市场同步
+
+- `main` 已推送至 `ef5a03c`，标注 `v0.4.8`；[公开 Release](https://github.com/wisdomqin/product-update-tracker/releases/tag/v0.4.8) 为非草稿、非预发布、latest，附件 `product-update-tracker.tgz` 为 45,917 bytes，SHA-256 `ff4e7f9fa8d1d0e5e520ac386e3094dd0e7fc56de4100e3d7b144f748d5f2b52`。从 Release 重新下载的字节与本地包一致，`latest/download/product-update-tracker.tgz` 已重定向至 v0.4.8。
+- 市场现有条目的同名 latest Release 安装地址无需再提交 YAML PR。手动触发的[市场构建](https://github.com/dataelement/awesome-dsh-workbench/actions/runs/39218974820)首次因市场自身 Node 测试进程反序列化错误失败；原工作流重试成功，产出的 `github-pages` artifact 中该条目为 0.4.8、固定 v0.4.8 URL、45,917 bytes 和上述 SHA-256。公开市场索引仍需等待 GitHub Pages/CDN 切换后单独核对，不能把构建成功提前等同于线上已更新。
