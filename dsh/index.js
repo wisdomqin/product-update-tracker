@@ -30,7 +30,7 @@ export const inject = ['webServer', 'llm', 'agentDefaultModel', 'agents', 'sched
 export const Config = Schema.object({ root: Schema.string().required() })
 
 const MAX_COMMITS = 300
-const MAX_PUBLIC_PAGES = 12
+const MAX_PUBLIC_PAGES = 24
 const DETAIL_LIMIT = 30
 const REPORT_LIMIT = 60
 const MODEL_INPUT_LIMIT = 26000
@@ -380,8 +380,8 @@ async function collectTarget(target, reportDate = '', manual = false) {
   return { target, window, fetched, startedAt }
 }
 
-async function generateReport(ctx, target, manual = false) {
-  const evidence = await collectTarget(target, '', manual)
+async function generateReport(ctx, target, manual = false, reportDate = '') {
+  const evidence = await collectTarget(target, reportDate, manual)
   let analysis
   if (!evidence.fetched.changed) analysis = deterministicAnalysis(target, evidence.fetched, evidence.window)
   else {
@@ -393,15 +393,19 @@ async function generateReport(ctx, target, manual = false) {
   return storeReport({ ...evidence, analysis, trigger: manual ? 'manual' : 'scheduled', model })
 }
 
-function runReport(ctx, target, manual = false) {
-  if (runPromises.has(target.id)) return runPromises.get(target.id)
-  const promise = generateReport(ctx, target, manual).catch(async (error) => {
+function runReport(ctx, target, manual = false, reportDate = '') {
+  const running = runPromises.get(target.id)
+  if (running) {
+    if (running.reportDate !== reportDate) throw new RequestError('该对象正在检查其他日期，请稍后重试', 409)
+    return running.promise
+  }
+  const promise = generateReport(ctx, target, manual, reportDate).catch(async (error) => {
     state.lastError = `${target.name}：${clean(error.message, 700)}`
     state.lastRunAt = now()
     await save().catch(() => {})
     throw error
   }).finally(() => runPromises.delete(target.id))
-  runPromises.set(target.id, promise)
+  runPromises.set(target.id, { reportDate, promise })
   return promise
 }
 
@@ -629,7 +633,13 @@ export function apply(ctx, config) {
         const body = await readJson(req)
         const target = body.targetId ? findTarget(body.targetId) : state.targets[0]
         if (!target) throw new RequestError('缺少 targetId')
-        const report = await runReport(ctx, target, true)
+        const reportDate = String(body.reportDate || '').trim()
+        if (reportDate) {
+          const requested = localDayWindow(reportDate)
+          if (target.type !== 'github') throw new RequestError('普通网页无法按历史日期回溯，只能比较当前快照')
+          if (requested.until > collectionWindow({}).until) throw new RequestError('不能补查今天或未来日期')
+        }
+        const report = await runReport(ctx, target, true, reportDate)
         return json(res, 200, { report })
       }
       if (url.pathname === '/api/deepseek-harness-daily/automation/configure' && req.method === 'POST') {

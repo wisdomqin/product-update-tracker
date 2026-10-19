@@ -47,6 +47,14 @@ test('upserts one stable report per target and report date', () => {
   assert.match(server, /item\.targetId === report\.targetId && item\.reportDate === report\.reportDate/)
 })
 
+test('allows a single GitHub date rerun without rewriting web history or future days', () => {
+  assert.match(server, /const reportDate = String\(body\.reportDate \|\| ''\)\.trim\(\)/)
+  assert.match(server, /if \(target\.type !== 'github'\) throw new RequestError/)
+  assert.match(server, /requested\.until > collectionWindow\(\{\}\)\.until/)
+  assert.match(server, /runReport\(ctx, target, true, reportDate\)/)
+  assert.match(server, /running\.reportDate !== reportDate/)
+})
+
 test('does not expose snapshots in public target state', () => {
   assert.match(server, /state\.targets\.map\(\(\{ snapshot, \.\.\.target \}\) => target\)/)
 })
@@ -90,6 +98,25 @@ test('opens on a monthly product update calendar', () => {
   assert.match(client, /上一个月/)
   assert.match(client, /下一个月/)
   assert.match(client, /onOpenReport\(item\.id, report\.id\)/)
+})
+
+test('shows a one-sentence report headline on calendar cell hover and keyboard focus', () => {
+  assert.match(client, /function calendarCellSummary\(report, count\)/)
+  assert.match(client, /report\?\.headline \|\| report\?\.overview/)
+  assert.match(client, /onPointerEnter: \(event\) => showCellSummary/)
+  assert.match(client, /onFocus: \(event\) => showCellSummary/)
+  assert.match(client, /onScroll: \(\) => setHover\(null\)/)
+  assert.match(client, /className: 'hdy-calendar-tip', role: 'tooltip'/)
+  assert.match(client, /pointer-events:none/)
+})
+
+test('calendar hover text stays a short single sentence for changed and unchanged days', () => {
+  const start = client.indexOf('  function calendarCellSummary(')
+  const end = client.indexOf('  function CalendarOverview(', start)
+  const summary = new Function(`${client.slice(start, end)}; return calendarCellSummary`)()
+  assert.equal(summary({ headline: '新增搜索功能。修复设置问题。' }, 2), '新增搜索功能。')
+  assert.equal(summary({ headline: '网页内容没有变化' }, 0), '网页内容没有变化。')
+  assert.ok(summary({ headline: '更新'.repeat(70) }, 10).length <= 78)
 })
 
 test('labels manual refresh as checking yesterday', () => {

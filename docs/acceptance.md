@@ -43,3 +43,12 @@
 - `pnpm check`：35 项测试通过；本机 web profile 已从 0.4.7 tarball 安装，安装文件与包内 11 个文件逐项一致。本机固定名 `product-update-tracker.tgz` 也已更新为 0.4.7（SHA-256 `488199e6ffde4007f187ba1332a80dd46299f35f35cd880de3b0f36bdf52804b`）。安装时曾发现同版本号重包会命中旧缓存，因此以 0.4.7 新版本号完成最终安装校验。
 - [历史日报只读核对](history-audit-2026-10-13.md)发现若干当前公开计数与存档快照不一致；**没有自动改写历史日报**。重启后可在原会话中指定 GitHub 对象 ID 和日期逐项补查。
 - 本修订未在重启后的 Desktop 界面验收，也未更新远端 GitHub Release 或市场 PR。上面 0.4.5 的历史验收与发布记录保持原样。
+
+## 2026-10-19 本机候选修订（0.4.8）
+
+- 月度总览中已有日报的日期格支持鼠标悬停与键盘聚焦，一句话展示该日报标题摘要；鼠标离开、失焦、滚动或切换月份时关闭提示。
+- GitHub 公开提交页补查上限增加至 24 页，2026-10-12 DeepSeek Harness 当前公开页需 16 页才完成覆盖（151 条提交）；普通网页仍禁止旧日期回溯。
+- `POST /api/deepseek-harness-daily/refresh` 支持只对单个 GitHub 追踪对象指定 `reportDate` 补查旧日期，不改变未指定日期的“检查昨日”行为。2026-10-12 的历史报告尚未在本次候选修订中写回。
+- `pnpm check`：38 项测试通过；本机固定名 `product-update-tracker.tgz` 已更新为 0.4.8（SHA-256 `ff4e7f9fa8d1d0e5e520ac386e3094dd0e7fc56de4100e3d7b144f748d5f2b52`）。
+- **尚未成功安装**：官方 `plugin --profile web add` 正常、`--offline`、`--offline --ignore-scripts` 三次均停在 pnpm resolved 7，随后被宿主 300 秒无进展保护终止；runner 每次恢复了 generation projections。安装目录仍是 0.4.7。没有直接覆盖运行中的插件或改写历史日报。
+- 需要先排查插件管理器/依赖解析阻塞，再安装 0.4.8 并完整重启 Desktop，才能验证真实 Hover 和旧日期补查；不将源码测试误报为运行中 GUI 验收。
