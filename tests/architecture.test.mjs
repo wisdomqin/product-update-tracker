@@ -86,6 +86,12 @@ test('makes every selected target visibly manageable', () => {
   assert.match(client, /删除/)
 })
 
+test('makes the custom macOS header draggable without swallowing its controls', () => {
+  assert.match(client, /customFrame: true/)
+  assert.match(client, /e\('header', \{ className: 'hdy-header', 'data-window-drag': true \}/)
+  assert.match(client, /html\[data-platform=darwin\] \.hdy-header \.hdy-actions\{-webkit-app-region:no-drag\}/)
+})
+
 test('confines scrolling to the workbench main region', () => {
   assert.match(client, /\.hdy-root\{[^}]*overflow:hidden/)
   assert.match(client, /\.hdy-main\{[^}]*overflow:auto/)

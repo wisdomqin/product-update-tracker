@@ -25,6 +25,8 @@ dsh plugin --profile web add /path/to/product-update-tracker.tgz
 7. DSH Schedule 每天 11:00 向原会话追加任务，统一检查所有已启用对象并发布前一日的结构化日报；同一产品与日期只保留一条，自动运行会刷新同日的手动结果。
 8. 点击左侧工作台会话会打开原生会话浮窗；关闭浮窗不会关闭、归档或删除会话。
 
+在 macOS Desktop 中，工作台自绘顶栏的非交互区域可拖动窗口；右侧按钮与模型信息区域不会变成拖动区。
+
 ## 前置条件
 
 需要在 DSH Desktop 插件管理的“官方”分组启用带闹钟图标的 **自动化任务** Bundle（`@deepseek-ai/dsh-experimental-schedule-bundle`）。

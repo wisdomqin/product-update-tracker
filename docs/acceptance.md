@@ -57,3 +57,9 @@
 
 - `main` 已推送至 `ef5a03c`，标注 `v0.4.8`；[公开 Release](https://github.com/wisdomqin/product-update-tracker/releases/tag/v0.4.8) 为非草稿、非预发布、latest，附件 `product-update-tracker.tgz` 为 45,917 bytes，SHA-256 `ff4e7f9fa8d1d0e5e520ac386e3094dd0e7fc56de4100e3d7b144f748d5f2b52`。从 Release 重新下载的字节与本地包一致，`latest/download/product-update-tracker.tgz` 已重定向至 v0.4.8。
 - 市场现有条目的同名 latest Release 安装地址无需再提交 YAML PR。手动触发的[市场构建](https://github.com/dataelement/awesome-dsh-workbench/actions/runs/39218974820)首次因市场自身 Node 测试进程反序列化错误失败；原工作流重试成功，产出的 `github-pages` artifact 中该条目为 0.4.8、固定 v0.4.8 URL、45,917 bytes 和上述 SHA-256。GitHub Pages/CDN 切换后重新读取[公开市场索引](https://market.dshdesktop.com/index.json)，确认条目已显示 0.4.8、固定 v0.4.8 下载 URL、45,917 bytes 和相同 SHA-256；至此线上目录已更新。
+
+## 2026-10-27 顶栏拖动修订候选（0.4.9）
+
+- 用户截图显示工作台自绘顶栏不可拖动。宿主 macOS 样式按 `[data-window-drag]` 标记拖动区；给页头加该标记，并明确将右侧按钮/模型区域设为 `no-drag`，不更改按钮行为和工作台数据。
+- `pnpm check`：39 项测试通过；本地包 `product-update-tracker.tgz` 为 46,236 bytes，SHA-256 `9927a0ba9390531dee0e26bc92655904cece64fa7a2e0163583aead83fb1a49a`，11 个文件，无本机用户路径和凭据。
+- 此时本机 profile 的实际安装版本为 0.4.7（此前手工 0.4.8 被安装记录回滚）；尚未把 0.4.9 的运行中拖动体验称作已验收。后续发布与本机安装结果另记。
