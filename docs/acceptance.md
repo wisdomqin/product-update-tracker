@@ -68,4 +68,5 @@
 
 - 将 `@deepseek-ai/dsh-agent`、`dsh-schedule`、`dsh-tools` 的兼容声明限定为 `0.2.0-rc.2 || 0.2.1-rc.2`，没有使用 `allow-version --accept-risk` 豁免；其余工作台出现的兼容警告不属于本插件。
 - `pnpm check`：40 项测试通过；安装包 46,353 bytes、SHA-256 `d71a517d4594b143fd0f5ac3b0edbf77b5bbb3f305827b2dab5a17b47e8d65cd`。官方 `plugin --profile web add` 成功，本机 profile manifest、lock、安装包版本均为 0.4.10；包内 11 个文件与安装目录逐字节一致。
-- 还未重启 GUI 验证真实拖动手势；已验证宿主 macOS CSS 的拖动标记约定和客户端静态回归测试。公开 Release、市场目录与重启后体验需分别核对。
+- [公开 Release v0.4.10](https://github.com/wisdomqin/product-update-tracker/releases/tag/v0.4.10) 非草稿、非预发布，latest，附件重新下载与本地逐字节一致；`latest/download` 重定向至 v0.4.10。手动触发的[官方市场工作流](https://github.com/dataelement/awesome-dsh-workbench/actions/runs/40498917117)成功，其 Pages artifact 与[线上索引](https://market.dshdesktop.com/index.json) 均显示固定 v0.4.10 URL、46,353 bytes 和同一 SHA-256；不需新 YAML PR。
+- 还未重启 GUI 验证真实拖动手势；已验证宿主 macOS CSS 的拖动标记约定、客户端静态回归测试和正式安装持久化。重启后的视觉/交互体验仍需用户确认。
