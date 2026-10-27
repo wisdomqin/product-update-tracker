@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 
 const server = await readFile(new URL('../dsh/index.js', import.meta.url), 'utf8')
 const client = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
+const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'))
 
 test('uses DSH Schedule instead of a process-local timer', () => {
   assert.match(server, /ctx\.schedule\.create\(/)
@@ -84,6 +85,12 @@ test('makes every selected target visibly manageable', () => {
   assert.match(client, /编辑名称和网址/)
   assert.match(client, /暂停追踪/)
   assert.match(client, /删除/)
+})
+
+test('declares only the two verified Desktop host versions for scoped peers', () => {
+  for (const name of ['@deepseek-ai/dsh-agent', '@deepseek-ai/dsh-schedule', '@deepseek-ai/dsh-tools']) {
+    assert.equal(manifest.peerDependencies[name], '0.2.0-rc.2 || 0.2.1-rc.2')
+  }
 })
 
 test('makes the custom macOS header draggable without swallowing its controls', () => {

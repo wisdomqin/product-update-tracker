@@ -1,6 +1,6 @@
 {
   "name": "deepseek-harness-daily",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "description": "添加名称和网址，通过 DSH 自动化任务每天追踪 GitHub 仓库与普通网页的内容变化",
   "type": "module",
   "main": "./dsh/index.js",
@@ -37,9 +37,9 @@
     "@deepseek-ai/dsh-host-webserver": ">=0.1.0-0 <0.3.0-0",
     "@deepseek-ai/dsh-llm": ">=0.1.0-0 <0.3.0-0",
     "@deepseek-ai/dsh-agent-default-model": ">=0.1.0-0 <0.3.0-0",
-    "@deepseek-ai/dsh-agent": "0.2.0-rc.2",
-    "@deepseek-ai/dsh-schedule": "0.2.0-rc.2",
-    "@deepseek-ai/dsh-tools": "0.2.0-rc.2"
+    "@deepseek-ai/dsh-agent": "0.2.0-rc.2 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-schedule": "0.2.0-rc.2 || 0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2 || 0.2.1-rc.2"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "*"
